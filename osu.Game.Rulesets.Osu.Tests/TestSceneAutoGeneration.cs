@@ -22,7 +22,7 @@ namespace osu.Game.Rulesets.Osu.Tests
         public void TestAlternating(double offset, bool shouldAlternate)
         {
             const double first_object_time = 1000;
-            double secondObjectTime = first_object_time + AutoGenerator.KEY_UP_DELAY + OsuAutoGenerator.MIN_FRAME_SEPARATION_FOR_ALTERNATING + offset;
+            double secondObjectTime = first_object_time + OsuAutoGenerator.MIN_FRAME_SEPARATION_FOR_ALTERNATING + offset;
 
             var beatmap = new OsuBeatmap();
             beatmap.HitObjects.Add(new HitCircle { StartTime = first_object_time });
@@ -32,10 +32,28 @@ namespace osu.Game.Rulesets.Osu.Tests
             var frames = generated.Frames.OfType<OsuReplayFrame>().ToList();
 
             Assert.That(frames.Exists(f => f.Time == first_object_time && f.Actions.SingleOrDefault() == OsuAction.LeftButton));
-            Assert.That(frames.Exists(f => f.Time == first_object_time + AutoGenerator.KEY_UP_DELAY && !f.Actions.Any()));
+            Assert.That(frames.Exists(f => f.Time == first_object_time && !f.Actions.Any()));
 
             Assert.That(frames.Exists(f => f.Time == secondObjectTime && f.Actions.SingleOrDefault() == (shouldAlternate ? OsuAction.RightButton : OsuAction.LeftButton)));
-            Assert.That(frames.Exists(f => f.Time == secondObjectTime + AutoGenerator.KEY_UP_DELAY && !f.Actions.Any()));
+            Assert.That(frames.Exists(f => f.Time == secondObjectTime && !f.Actions.Any()));
+        }
+
+        [Test]
+        public void TestKeyRelease()
+        {
+            const double objectTime = 1000;
+
+            var beatmap = new OsuBeatmap();
+            beatmap.HitObjects.Add(new HitCircle { StartTime = objectTime });
+
+            // The default configuration handles the click entirely on the object's centre.
+            var autoPlus = new OsuAutoGenerator(beatmap, []).Generate().Frames.OfType<OsuReplayFrame>().ToList();
+            Assert.That(autoPlus.Exists(f => f.Time == objectTime && !f.Actions.Any()));
+            Assert.That(!autoPlus.Exists(f => f.Time == objectTime + AutoGenerator.KEY_UP_DELAY));
+
+            // Without the interpolation stage the release stays delayed so that the eased movement frames are kept.
+            var legacy = new OsuAutoGenerator(beatmap, []) { InterpolationOptions = null }.Generate().Frames.OfType<OsuReplayFrame>().ToList();
+            Assert.That(legacy.Exists(f => f.Time == objectTime + AutoGenerator.KEY_UP_DELAY && !f.Actions.Any()));
         }
 
         [TestCase(300)]
@@ -54,10 +72,10 @@ namespace osu.Game.Rulesets.Osu.Tests
             var frames = generated.Frames.OfType<OsuReplayFrame>().ToList();
 
             Assert.That(frames.Exists(f => f.Time == first_object_time && f.Actions.SingleOrDefault() == OsuAction.LeftButton));
-            Assert.That(frames.Exists(f => f.Time == first_object_time + AutoGenerator.KEY_UP_DELAY && !f.Actions.Any()));
+            Assert.That(frames.Exists(f => f.Time == first_object_time && !f.Actions.Any()));
 
             Assert.That(frames.Exists(f => f.Time == secondObjectTime && f.Actions.SingleOrDefault() == OsuAction.RightButton));
-            Assert.That(frames.Exists(f => f.Time == secondObjectTime + AutoGenerator.KEY_UP_DELAY && !f.Actions.Any()));
+            Assert.That(frames.Exists(f => f.Time == secondObjectTime && !f.Actions.Any()));
         }
     }
 }
